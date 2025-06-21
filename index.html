@@ -1,0 +1,2333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Neo AI Chat</title>
+  <link rel="icon" href="assets/neo.ico" type="image/x-icon">
+  <link rel="shortcut icon" href="assets/neo.ico" type="image/x-icon">
+  <link rel="stylesheet" href="assets/icons/css/all.min.css" />
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Memory indicator styles */
+    .memory-indicator {
+      background-color: rgba(0, 220, 212, 0.1);
+      border-left: 3px solid #00DCD4;
+      opacity: 1;
+      transition: opacity 1s ease;
+      margin: 10px 20px;
+      padding: 8px 12px;
+    }
+    
+    .memory-indicator p {
+      color: #cccccc;
+      font-size: 0.8rem;
+      font-style: italic;
+    }
+    
+    .memory-indicator .fa-brain {
+      color: #00DCD4;
+      margin-right: 5px;
+    }
+    
+    .message.info {
+      max-width: 90%;
+      margin-left: auto;
+      margin-right: auto;
+      text-align: center;
+    }
+    
+    /* Small button style */
+    .small-btn {
+      padding: 6px 12px !important;
+      font-size: 12px !important;
+      background-color: #1F2937 !important;
+      color: #00DCD4 !important;
+      border: 1px solid rgba(0, 220, 212, 0.3) !important;
+      border-radius: 6px !important;
+      transition: all 0.25s ease !important;
+      cursor: pointer !important;
+    }
+    
+    .small-btn:hover {
+      background-color: #252D3A !important;
+      border-color: rgba(0, 220, 212, 0.7) !important;
+      transform: translateY(-2px) !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat-popup-header">
+      <div class="chat-model">
+        <span class="model-indicator">Neo</span>
+        <span class="status-indicator"></span>
+      </div>
+      <div class="chat-popup-controls">
+        <button class="control-btn minimized-mic-btn" title="Voice input" style="display: none;"><i class="fas fa-microphone"></i></button>
+        <button class="control-btn settings-btn" title="n8n Settings"><i class="fas fa-cog"></i></button>
+        <button class="control-btn open-n8n-btn" title="Open n8n"><i class="fas fa-external-link-alt"></i></button>
+        <button class="control-btn minimize-btn" title="Minimize"><i class="fas fa-minus"></i></button>
+        <button class="control-btn close-btn" title="Close"><i class="fas fa-times"></i></button>
+      </div>
+    </div>
+    
+    <div class="chat-messages" id="chatMessages">
+      <!-- Removed the hardcoded welcome message -->
+    </div>
+    
+    <div class="chat-input-container">
+      <textarea id="messageInput" class="chat-input" placeholder="Ask me anything..." rows="1"></textarea>
+      <button id="sendButton" class="send-btn" title="Send message">
+        <i class="fas fa-microphone"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="modal">
+    <div class="modal-content">
+      <span class="close-modal">&times;</span>
+      <h2>Assistant Settings</h2>
+      <form id="n8n-settings-form">
+        <div class="form-group">
+          <label for="webhook-url">n8n Webhook URL</label>
+          <input type="url" id="webhook-url" placeholder="https://your-n8n-instance.com/webhook/your-workflow-id" required>
+          <small>The webhook URL that connects this assistant to your n8n workflow</small>
+        </div>
+        
+        <div class="form-group">
+          <label>AI Agent Mode</label>
+          <div class="toggle-container">
+            <input type="checkbox" id="use-gemini" class="toggle-checkbox">
+            <label for="use-gemini" class="toggle-label"></label>
+            <span id="ai-mode-label">Using n8n Workflow</span>
+          </div>
+          <small>Toggle between n8n workflow (automation) and Gemini AI (direct chat without n8n)</small>
+          <div class="action-buttons" id="gemini-actions" style="margin-top: 10px; display: none;">
+            <button type="button" id="clear-history-btn" class="btn small-btn">Clear Conversation History</button>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>Speech Recognition</label>
+          <div class="toggle-container">
+            <input type="checkbox" id="use-elevenlabs" class="toggle-checkbox" checked>
+            <label for="use-elevenlabs" class="toggle-label"></label>
+            <span id="stt-provider-label">Using ElevenLabs STT</span>
+          </div>
+          <small>Toggle between browser's built-in speech recognition (free) and ElevenLabs Speech-to-Text</small>
+        </div>
+        
+        <div class="form-group">
+          <label>Text-to-Speech</label>
+          <div class="toggle-container">
+            <input type="checkbox" id="enable-tts" class="toggle-checkbox" checked>
+            <label for="enable-tts" class="toggle-label"></label>
+            <span id="tts-label">Text-to-Speech Enabled</span>
+          </div>
+          <small>Enable or disable ElevenLabs text-to-speech for assistant responses</small>
+        </div>
+        
+        <div class="form-group elevenlabs-settings">
+          <label for="elevenlabs-voice">ElevenLabs Voice</label>
+          <select id="elevenlabs-voice" class="form-select">
+            <option value="loading">Loading voices...</option>
+          </select>
+          <small>Select a voice from your ElevenLabs account</small>
+        </div>
+        
+        <div class="form-group">
+          <label>Navigation Link</label>
+          <div class="toggle-container">
+            <input type="checkbox" id="nav-link" class="toggle-checkbox">
+            <label for="nav-link" class="toggle-label"></label>
+            <span id="nav-link-label">Navigation Link Disabled</span>
+          </div>
+          <small>Enable or disable navigation link to the workflow templates page</small>
+        </div>
+        
+        <div class="form-group">
+          <label for="google-api-key">Gemini API Key</label>
+          <input type="password" id="google-api-key" placeholder="Enter your Gemini API key">
+          <small>Your API key for Gemini</small>
+        </div>
+        
+        <div class="form-group">
+          <label for="elevenlabs-api-key">ElevenLabs API Key</label>
+          <input type="password" id="elevenlabs-api-key" placeholder="Enter your ElevenLabs API key">
+          <small>Your ElevenLabs API key for advanced Speech-to-Text and Text-to-Speech</small>
+        </div>
+        
+        <!-- Add language selection dropdown -->
+        <div class="form-group">
+          <label for="speech-language">Speech Recognition Language</label>
+          <select id="speech-language" class="form-select">
+            <option value="loading">Loading languages...</option>
+          </select>
+          <small>Select the primary language for speech recognition</small>
+        </div>
+        
+        <div class="form-buttons">
+          <button type="button" id="test-webhook" class="btn test-btn">Test Connection</button>
+          <button type="submit" class="btn">Save Settings</button>
+        </div>
+        <div id="test-result" class="test-result"></div>
+      </form>
+    </div>
+  </div>
+
+  <script src="assets/gsap/gsap.min.js"></script>
+  <script>
+    // Store references to common elements
+      const chatContainer = document.querySelector('.chat-container');
+    const statusIndicator = document.querySelector('.status-indicator');
+    const minimizeBtn = document.querySelector('.minimize-btn');
+    const settingsBtn = document.querySelector('.settings-btn');
+    const openN8nBtn = document.querySelector('.open-n8n-btn');
+    const messageInput = document.getElementById('messageInput');
+    const sendButton = document.getElementById('sendButton');
+    const chatMessages = document.getElementById('chatMessages');
+    const minimizedMicBtn = document.querySelector('.minimized-mic-btn');
+    const useGeminiToggle = document.getElementById('use-gemini');
+    const aiModeLabel = document.getElementById('ai-mode-label');
+    
+    // Toggle microphone/send button based on input
+    messageInput.addEventListener('input', function() {
+      const sendIcon = sendButton.querySelector('i');
+      if (this.value.trim() === '') {
+        sendIcon.className = 'fas fa-microphone';
+        sendButton.title = 'Voice input';
+      } else {
+        sendIcon.className = 'fas fa-paper-plane';
+        sendButton.title = 'Send message';
+      }
+
+      // Auto-resize textarea with max-height limit
+      this.style.height = 'auto';
+      const newHeight = Math.min(this.scrollHeight, parseInt(window.getComputedStyle(this).maxHeight));
+      this.style.height = newHeight + 'px';
+    });
+    
+    // Window controls
+    minimizeBtn.addEventListener('click', () => {
+      chatContainer.classList.toggle('minimized');
+      document.body.classList.toggle('minimized');
+      
+      if (chatContainer.classList.contains('minimized')) {
+        minimizeBtn.innerHTML = '<i class="fas fa-expand"></i>';
+        // Hide settings button when minimized
+        settingsBtn.style.display = 'none';
+        // Show minimized mic button
+        minimizedMicBtn.style.display = 'inline-block';
+        // Resize the window through Electron
+        window.electronAPI.resizeWindow(400, 60);
+      } else {
+        minimizeBtn.innerHTML = '<i class="fas fa-minus"></i>';
+        // Show settings button when maximized
+        settingsBtn.style.display = 'inline-block';
+        // Hide minimized mic button
+        minimizedMicBtn.style.display = 'none';
+        // Remove new message indicator when maximized
+        statusIndicator.classList.remove('new-message');
+        // Restore the window size through Electron
+        window.electronAPI.resizeWindow(400, 600);
+      }
+    });
+    
+    document.querySelector('.close-btn').addEventListener('click', () => {
+      // Clear any pending timeouts
+      const allTimeouts = setTimeout(function() {}, 0);
+      for (let i = 0; i <= allTimeouts; i++) {
+        clearTimeout(i);
+      }
+      
+      // Show closing message
+      addMessage('Closing and terminating all processes...', false);
+      
+      // Add a small delay before closing to allow the message to be seen
+      setTimeout(() => {
+        // Use the proper IPC channel to quit the app
+        window.electronAPI.quitApp().then(() => {
+          console.log('Quit command sent successfully');
+        }).catch(err => {
+          console.error('Error sending quit command:', err);
+          // Fallback to window.close() only if IPC fails
+      window.close();
+        });
+      }, 1000);
+    });
+    
+    // Handle open n8n button click
+    openN8nBtn.addEventListener('click', () => {
+      const settings = JSON.parse(localStorage.getItem('n8nSettings') || '{}');
+      
+      if (!settings.url) {
+        addMessage('Please configure n8n settings first by clicking the settings icon.', false);
+        return;
+      }
+      
+      try {
+        // Extract the base URL from the webhook URL
+        let n8nUrl = settings.url;
+        
+        // Parse the URL to get the origin (base URL)
+        const url = new URL(n8nUrl);
+        let baseUrl = url.origin;
+        
+        // Always open the base URL (http://localhost:5678)
+        window.open(baseUrl, '_blank');
+      } catch (error) {
+        console.error('Error parsing n8n URL:', error);
+        addMessage('Unable to open n8n. Please check your webhook URL configuration.', false);
+      }
+    });
+    
+    // Check n8n status when page loads
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        console.log('Checking n8n status...');
+        const statusIndicator = document.querySelector('.status-indicator');
+        
+        // Try to check n8n status
+        const n8nStatus = await window.electronAPI.checkN8nStatus();
+        console.log('n8n status:', n8nStatus);
+        
+        // Check if user prefers Gemini mode
+        if (n8nStatus.preferGemini) {
+          // User has explicitly chosen Gemini mode
+          console.log('User preference set to use Gemini AI directly');
+          statusIndicator.classList.remove('n8n-connected', 'n8n-disconnected', 'no-webhook');
+          statusIndicator.classList.add('gemini-mode');
+          statusIndicator.style.background = '';
+          statusIndicator.style.boxShadow = '';
+          
+          // Hide the n8n button
+          openN8nBtn.style.display = 'none';
+          
+          // Show welcome message with Gemini info
+          const welcomeMsg = 'Welcome to Neo AI Chat! Using Gemini AI mode for direct responses.';
+          addMessage(welcomeMsg, false);
+          return;
+        }
+        
+        // Check if n8n is running
+        if (n8nStatus.running) {
+          // n8n is running
+          statusIndicator.classList.remove('n8n-disconnected', 'gemini-mode', 'no-webhook');
+          statusIndicator.classList.add('n8n-connected');
+          statusIndicator.style.background = '#00DCD4'; // Turquoise color to match Neo logo
+          statusIndicator.style.boxShadow = '0 0 10px #00DCD4, 0 0 20px rgba(0, 220, 212, 0.5)';
+          // Now check if webhook is configured
+          const settings = JSON.parse(localStorage.getItem('n8nSettings') || '{}');
+          if (!settings.url) {
+            // No webhook set but n8n is running
+            console.log('n8n is running but no webhook is configured');
+            statusIndicator.classList.add('no-webhook');
+          }
+        } else if (n8nStatus.useGemini) {
+          // Using Gemini API
+          console.log('Using Gemini API');
+          statusIndicator.classList.remove('n8n-connected', 'n8n-disconnected', 'no-webhook');
+          statusIndicator.classList.add('gemini-mode');
+          statusIndicator.style.background = '';
+          statusIndicator.style.boxShadow = '';
+          // Show welcome message with Gemini info
+          const welcomeMsg = 'Welcome to Neo AI Chat! n8n is not available, so I\'m using advanced AI to assist you. You can chat directly without n8n.';
+          addMessage(welcomeMsg, false);
+        } else {
+          // n8n is not running
+          statusIndicator.classList.remove('n8n-connected', 'gemini-mode', 'no-webhook');
+          statusIndicator.classList.add('n8n-disconnected');
+          statusIndicator.style.background = '';
+          statusIndicator.style.boxShadow = '';
+        }
+      } catch (error) {
+        console.error('Error checking n8n status:', error);
+      }
+      
+      // Load saved webhook URL
+      const settings = JSON.parse(localStorage.getItem('n8nSettings') || '{}');
+      if (settings.url) {
+        document.getElementById('webhook-url').value = settings.url;
+      }
+    });
+    
+    // Function to clear all messages
+    function clearMessages() {
+      while (chatMessages.firstChild) {
+        chatMessages.removeChild(chatMessages.firstChild);
+      }
+      
+      // Also clear Gemini conversation history
+      window.electronAPI.clearGeminiHistory()
+        .then(result => {
+          console.log('Gemini conversation history cleared');
+        })
+        .catch(error => {
+          console.error('Failed to clear Gemini conversation history:', error);
+        });
+    }
+
+    // Listen for n8n started event
+    document.addEventListener('n8n-started', () => {
+      console.log('n8n is now started and ready');
+      
+      // Clear startup message
+      clearMessages();
+      
+      // Update indicator to show n8n is connected
+      statusIndicator.classList.remove('n8n-disconnected');
+      statusIndicator.classList.add('n8n-connected');
+      statusIndicator.style.background = '#00DCD4'; // Turquoise color to match Neo logo
+      statusIndicator.style.boxShadow = '0 0 10px #00DCD4, 0 0 20px rgba(0, 220, 212, 0.5)';
+      
+      // Check if webhook is configured
+      const savedSettings = localStorage.getItem('n8nSettings');
+      if (!savedSettings || !JSON.parse(savedSettings).url) {
+        // No webhook set
+        statusIndicator.classList.remove('n8n-connected');
+        statusIndicator.classList.add('no-webhook');
+        
+        // Show notification about configuring n8n
+        const welcomeMsg = 'Welcome to Neo AI Chat! Please configure your n8n webhook to get started.';
+        addMessage(welcomeMsg, false);
+        // Call speakText for welcome message
+        speakText(welcomeMsg);
+      } else {
+        // Webhook is configured, show a welcome message
+        const greetingMsg = 'Hi there! I\'m Neo, your AI assistant. How can I help you today?';
+        addMessage(greetingMsg, false);
+        // Call speakText for greeting
+        speakText(greetingMsg);
+      }
+    });
+
+    // Listen for n8n-not-installed event to switch to Gemini mode
+    document.addEventListener('n8n-not-installed', (event) => {
+      console.log('n8n is not installed, switching to Gemini mode');
+      
+      // Clear any existing messages
+      clearMessages();
+      
+      // Update the status indicator to show we're using Gemini
+      const statusIndicator = document.querySelector('.status-indicator');
+      statusIndicator.classList.remove('n8n-connected', 'n8n-disconnected', 'no-webhook', 'processing');
+      statusIndicator.classList.add('gemini-mode');
+      statusIndicator.style.background = '';
+      statusIndicator.style.boxShadow = '';
+      
+      // Show welcome message with Gemini info
+      const welcomeMsg = 'Welcome to Neo AI Chat! n8n is not available, so I\'m using advanced AI to assist you. You can chat directly without n8n.';
+      addMessage(welcomeMsg, false);
+      
+      // Update the model indicator text
+      const modelIndicator = document.querySelector('.model-indicator');
+      if (modelIndicator) {
+        modelIndicator.textContent = 'Neo';
+      }
+    });
+    
+    // Settings modal
+    const settingsModal = document.getElementById('settings-modal');
+    const closeModal = document.querySelector('.close-modal');
+    
+    settingsBtn.addEventListener('click', () => {
+      settingsModal.style.display = 'block';
+    });
+    
+    closeModal.addEventListener('click', () => {
+      settingsModal.style.display = 'none';
+    });
+    
+    window.addEventListener('click', (e) => {
+      if (e.target === settingsModal) {
+        settingsModal.style.display = 'none';
+      }
+    });
+    
+    // Save n8n settings
+    const n8nSettingsForm = document.getElementById('n8n-settings-form');
+    const useElevenLabsToggle = document.getElementById('use-elevenlabs');
+    const sttProviderLabel = document.getElementById('stt-provider-label');
+    const enableTtsToggle = document.getElementById('enable-tts');
+    const ttsLabel = document.getElementById('tts-label');
+    const elevenLabsVoiceSelect = document.getElementById('elevenlabs-voice');
+    const googleApiKeyInput = document.getElementById('google-api-key');
+    const elevenLabsApiKeyInput = document.getElementById('elevenlabs-api-key');
+    
+    // Add audio element for TTS playback
+    const ttsAudio = document.createElement('audio');
+    document.body.appendChild(ttsAudio);
+    
+    // Load settings on page load
+    window.addEventListener('DOMContentLoaded', async () => {
+      loadSpeechRecognitionSettings();
+      loadTextToSpeechSettings();
+      loadApiKeys();
+      loadSpeechLanguages();
+      loadAIModeSetting();
+      
+      // Load ElevenLabs voices
+      await loadElevenLabsVoices();
+      
+      // Setup clear history button
+      const clearHistoryBtn = document.getElementById('clear-history-btn');
+      if (clearHistoryBtn) {
+        clearHistoryBtn.addEventListener('click', () => {
+          window.electronAPI.clearGeminiHistory()
+            .then(() => {
+              // Show confirmation message
+              addMessage('Conversation history cleared. Gemini will start fresh without context from previous messages.', false);
+              
+              // Close settings modal
+              settingsModal.style.display = 'none';
+            })
+            .catch(error => {
+              console.error('Failed to clear conversation history:', error);
+            });
+        });
+      }
+    });
+    
+    // Load AI mode preference
+    const loadAIModeSetting = async () => {
+      try {
+        // Get settings from main process
+        const result = await window.electronAPI.openSettingsPanel();
+        
+        if (result.success && result.settings) {
+          // Set the toggle based on the stored preference
+          useGeminiToggle.checked = result.settings.preferGemini;
+          updateAIModeLabel();
+          
+          // Update the UI based on the current mode
+          updateAIModeUI(result.settings.preferGemini);
+        }
+      } catch (error) {
+        console.error('Error loading AI mode setting:', error);
+        useGeminiToggle.checked = false;
+        updateAIModeLabel();
+      }
+    };
+    
+    // Update the AI mode label based on the toggle state
+    const updateAIModeLabel = () => {
+      if (useGeminiToggle.checked) {
+        aiModeLabel.textContent = 'Using Gemini AI';
+        aiModeLabel.style.color = '#00DCD4';
+        // Show or hide the webhook URL field based on mode
+        document.getElementById('webhook-url').parentElement.style.display = 'none';
+        // Show Gemini actions
+        document.getElementById('gemini-actions').style.display = 'block';
+      } else {
+        aiModeLabel.textContent = 'Using n8n Workflow';
+        aiModeLabel.style.color = '#DDD';
+        // Show webhook URL field when using n8n
+        document.getElementById('webhook-url').parentElement.style.display = 'block';
+        // Hide Gemini actions
+        document.getElementById('gemini-actions').style.display = 'none';
+      }
+    };
+    
+    // Update the UI based on AI mode
+    const updateAIModeUI = (useGemini) => {
+      // Update open-n8n button visibility
+      openN8nBtn.style.display = useGemini ? 'none' : 'inline-block';
+      
+      // Update status indicator
+      if (useGemini) {
+        statusIndicator.classList.remove('n8n-connected', 'n8n-disconnected', 'no-webhook');
+        statusIndicator.classList.add('gemini-mode');
+        statusIndicator.style.background = '';
+        statusIndicator.style.boxShadow = '';
+      } else {
+        // We'll check n8n status in the DOMContentLoaded event
+        // This just ensures we don't have the gemini-mode class
+        statusIndicator.classList.remove('gemini-mode');
+      }
+    };
+    
+    // Event listener for AI mode toggle change
+    useGeminiToggle.addEventListener('change', async () => {
+      updateAIModeLabel();
+      
+      // Save the setting to electron store
+      try {
+        await window.electronAPI.toggleAIMode(useGeminiToggle.checked);
+        
+        // Update the UI based on the new mode
+        updateAIModeUI(useGeminiToggle.checked);
+        
+        // Show message about the change
+        const message = useGeminiToggle.checked ? 
+          'Switched to Gemini AI mode. Using direct AI responses without n8n.' : 
+          'Switched to n8n workflow mode. Using automation workflows.';
+        
+        addMessage(message, false);
+        
+        // If we're switching to n8n mode, check its status
+        if (!useGeminiToggle.checked) {
+          const n8nStatus = await window.electronAPI.checkN8nStatus();
+          
+          if (n8nStatus.running) {
+            statusIndicator.classList.remove('n8n-disconnected', 'gemini-mode');
+            statusIndicator.classList.add('n8n-connected');
+            statusIndicator.style.background = '#00DCD4';
+            statusIndicator.style.boxShadow = '0 0 10px #00DCD4, 0 0 20px rgba(0, 220, 212, 0.5)';
+          } else {
+            statusIndicator.classList.remove('n8n-connected', 'gemini-mode');
+            statusIndicator.classList.add('n8n-disconnected');
+            statusIndicator.style.background = '';
+            statusIndicator.style.boxShadow = '';
+            
+            addMessage('n8n is not running. Please start n8n to use workflow mode.', false);
+          }
+        }
+      } catch (error) {
+        console.error('Error saving AI mode preference:', error);
+        addMessage('Error saving AI mode preference. Please try again.', false);
+      }
+    });
+    
+    // Load speech recognition preference
+    const loadSpeechRecognitionSettings = () => {
+      const savedSettings = localStorage.getItem('speechRecognitionSettings');
+      if (savedSettings) {
+        const settings = JSON.parse(savedSettings);
+        useElevenLabsToggle.checked = settings.useElevenLabsSTT;
+        updateSttProviderLabel();
+      } else {
+        // Default to using ElevenLabs
+        localStorage.setItem('speechRecognitionSettings', JSON.stringify({
+          useElevenLabsSTT: true
+        }));
+        useElevenLabsToggle.checked = true;
+        updateSttProviderLabel();
+      }
+    };
+    
+    // Load text-to-speech preference
+    const loadTextToSpeechSettings = () => {
+      const savedSettings = localStorage.getItem('textToSpeechSettings');
+      if (savedSettings) {
+        const settings = JSON.parse(savedSettings);
+        enableTtsToggle.checked = settings.enableTts;
+        updateTtsLabel();
+      } else {
+        // Default to enabled
+        localStorage.setItem('textToSpeechSettings', JSON.stringify({
+          enableTts: true
+        }));
+        enableTtsToggle.checked = true;
+        updateTtsLabel();
+      }
+    };
+    
+    // Load API keys from electron store
+    const loadApiKeys = async () => {
+      try {
+        // Get Google API key
+        const googleApiKey = await window.electronAPI.getApiKey('google');
+        if (googleApiKey) {
+          googleApiKeyInput.value = googleApiKey;
+        }
+        
+        // Get ElevenLabs API key
+        const elevenLabsApiKey = await window.electronAPI.getApiKey('elevenlabs');
+        if (elevenLabsApiKey) {
+          elevenLabsApiKeyInput.value = elevenLabsApiKey;
+        }
+      } catch (error) {
+        console.error('Error loading API keys:', error);
+      }
+    };
+    
+    // Load speech recognition languages
+    const loadSpeechLanguages = async () => {
+      try {
+        // Show loading state
+        const speechLanguageSelect = document.getElementById('speech-language');
+        speechLanguageSelect.innerHTML = '<option value="loading">Loading languages...</option>';
+        
+        // Get languages from main process
+        const result = await window.electronAPI.getSpeechRecognitionLanguage();
+        
+        if (result.success && result.supportedLanguages) {
+          // Clear the select
+          speechLanguageSelect.innerHTML = '';
+          
+          // Add each language as an option
+          result.supportedLanguages.forEach(lang => {
+            const option = document.createElement('option');
+            option.value = lang.code;
+            option.textContent = lang.name;
+            speechLanguageSelect.appendChild(option);
+          });
+          
+          // Select the current language
+          if (result.language) {
+            speechLanguageSelect.value = result.language;
+          }
+        } else {
+          // Show error
+          speechLanguageSelect.innerHTML = '<option value="auto">Auto Detect (Default)</option>';
+          console.error('Failed to load speech languages:', result.error);
+        }
+      } catch (error) {
+        console.error('Error loading speech languages:', error);
+        const speechLanguageSelect = document.getElementById('speech-language');
+        speechLanguageSelect.innerHTML = '<option value="auto">Auto Detect (Default)</option>';
+      }
+    };
+    
+    // Load ElevenLabs voices
+    const loadElevenLabsVoices = async () => {
+      try {
+        // Show loading state
+        elevenLabsVoiceSelect.innerHTML = '<option value="loading">Loading voices...</option>';
+        
+        // Get voices from ElevenLabs
+        const result = await window.electronAPI.elevenLabsGetVoices();
+        
+        if (result.success && result.voices) {
+          // Clear the select
+          elevenLabsVoiceSelect.innerHTML = '';
+          
+          // Add each voice as an option
+          result.voices.forEach(voice => {
+            const option = document.createElement('option');
+            option.value = voice.voice_id;
+            option.textContent = voice.name;
+            elevenLabsVoiceSelect.appendChild(option);
+          });
+          
+          // Select the saved voice if available
+          const savedSettings = localStorage.getItem('elevenLabsVoiceSettings');
+          if (savedSettings) {
+            const settings = JSON.parse(savedSettings);
+            if (settings.voiceId) {
+              elevenLabsVoiceSelect.value = settings.voiceId;
+            }
+          } else {
+            // Default to the first voice
+            if (result.voices.length > 0) {
+              localStorage.setItem('elevenLabsVoiceSettings', JSON.stringify({
+                voiceId: result.voices[0].voice_id
+              }));
+            }
+          }
+        } else {
+          // Show error
+          elevenLabsVoiceSelect.innerHTML = '<option value="">Failed to load voices</option>';
+          console.error('Failed to load ElevenLabs voices:', result.error);
+        }
+      } catch (error) {
+        console.error('Error loading ElevenLabs voices:', error);
+        elevenLabsVoiceSelect.innerHTML = '<option value="">Failed to load voices</option>';
+      }
+    };
+    
+    // Toggle ElevenLabs settings visibility
+    const toggleElevenLabsSettings = () => {
+      const elevenLabsSettings = document.querySelector('.elevenlabs-settings');
+      const googleVoiceSettings = document.querySelector('.google-voice-settings');
+      
+      if (useElevenLabsToggle.checked) {
+        elevenLabsSettings.style.display = 'block';
+        googleVoiceSettings.style.display = 'none';
+      } else {
+        elevenLabsSettings.style.display = 'none';
+        googleVoiceSettings.style.display = 'block';
+      }
+    };
+    
+    // Update the STT provider label based on the toggle state
+    const updateSttProviderLabel = () => {
+      if (useElevenLabsToggle.checked) {
+        sttProviderLabel.textContent = 'Using ElevenLabs STT';
+        sttProviderLabel.style.color = '#00DCD4';
+      } else {
+        sttProviderLabel.textContent = 'Using Browser Recognition (Free)';
+        sttProviderLabel.style.color = '#DDD';
+      }
+    };
+    
+    // Update the TTS label based on the toggle state
+    const updateTtsLabel = () => {
+      if (enableTtsToggle.checked) {
+        ttsLabel.textContent = 'Text-to-Speech Enabled';
+        ttsLabel.style.color = '#00DCD4';
+      } else {
+        ttsLabel.textContent = 'Text-to-Speech Disabled';
+        ttsLabel.style.color = '#DDD';
+      }
+    };
+    
+    // Event listener for STT toggle change
+    useElevenLabsToggle.addEventListener('change', () => {
+      updateSttProviderLabel();
+      
+      // Save the setting
+      localStorage.setItem('speechRecognitionSettings', JSON.stringify({
+        useElevenLabsSTT: useElevenLabsToggle.checked
+      }));
+      
+      // Show message about the change
+      const message = useElevenLabsToggle.checked ? 
+        'Switched to ElevenLabs Speech-to-Text. Higher accuracy with advanced voice recognition.' : 
+        'Switched to browser speech recognition (free). May be less accurate but has no cost.';
+      
+      addMessage(message, false);
+    });
+    
+    // Event listener for TTS toggle change
+    enableTtsToggle.addEventListener('change', () => {
+      updateTtsLabel();
+      
+      // Save the setting
+      localStorage.setItem('textToSpeechSettings', JSON.stringify({
+        enableTts: enableTtsToggle.checked
+      }));
+      
+      // Show message about the change
+      const message = enableTtsToggle.checked ? 
+        'ElevenLabs text-to-speech enabled. Assistant responses will be spoken aloud.' : 
+        'Text-to-speech disabled. Assistant responses will be text only.';
+      
+      addMessage(message, false);
+      
+      // If enabled, speak the message as a test
+      if (enableTtsToggle.checked) {
+        speakText(message);
+      }
+    });
+    
+    // Event listener for ElevenLabs voice change
+    elevenLabsVoiceSelect.addEventListener('change', () => {
+      // Save the setting
+      localStorage.setItem('elevenLabsVoiceSettings', JSON.stringify({
+        voiceId: elevenLabsVoiceSelect.value
+      }));
+      
+      // If TTS is enabled, speak a test message
+      if (enableTtsToggle.checked) {
+        const message = `This is a test of the selected voice.`;
+        speakText(message);
+      }
+    });
+    
+    // Event listener for API key inputs
+    googleApiKeyInput.addEventListener('change', async () => {
+      try {
+        await window.electronAPI.setApiKey('google', googleApiKeyInput.value);
+        addMessage('Google API key saved successfully.', false);
+      } catch (error) {
+        console.error('Error saving Google API key:', error);
+        addMessage('Error saving Google API key. Please try again.', false);
+      }
+    });
+    
+    elevenLabsApiKeyInput.addEventListener('change', async () => {
+      try {
+        await window.electronAPI.setApiKey('elevenlabs', elevenLabsApiKeyInput.value);
+        addMessage('ElevenLabs API key saved successfully.', false);
+        
+        // Reload voices if using ElevenLabs
+        if (useElevenLabsToggle.checked) {
+          await loadElevenLabsVoices();
+        }
+      } catch (error) {
+        console.error('Error saving ElevenLabs API key:', error);
+        addMessage('Error saving ElevenLabs API key. Please try again.', false);
+      }
+    });
+    
+    // Event listener for speech language change
+    const speechLanguageSelect = document.getElementById('speech-language');
+    speechLanguageSelect.addEventListener('change', () => {
+      const selectedLanguage = speechLanguageSelect.value;
+      localStorage.setItem('speechRecognitionSettings', JSON.stringify({
+        useElevenLabsSTT: selectedLanguage !== 'auto',
+        useGoogleApi: selectedLanguage === 'auto',
+        language: selectedLanguage
+      }));
+      updateSttProviderLabel();
+      addMessage(`Speech recognition language set to: ${selectedLanguage}`, false);
+    });
+    
+    // Function to speak text using the selected TTS provider
+    async function speakText(text) {
+      try {
+        // Check if TTS is enabled
+        const savedSettings = localStorage.getItem('textToSpeechSettings');
+        const enableTts = savedSettings ? JSON.parse(savedSettings).enableTts : false;
+        
+        if (!enableTts) {
+          return; // TTS is disabled, do nothing
+        }
+        
+        // Check which TTS provider to use
+        const ttsProviderSettings = localStorage.getItem('ttsProviderSettings');
+        const useElevenLabs = ttsProviderSettings ? JSON.parse(ttsProviderSettings).useElevenLabs : false;
+        
+        console.log('Generating speech for:', text);
+        console.log('Using provider:', useElevenLabs ? 'ElevenLabs' : 'Google');
+        
+        let response;
+        
+        if (useElevenLabs) {
+          // Get selected voice
+          const voiceSettings = localStorage.getItem('elevenLabsVoiceSettings');
+          const voiceId = voiceSettings ? JSON.parse(voiceSettings).voiceId : null;
+          
+          console.log('Using ElevenLabs voice ID:', voiceId);
+          
+          // Call ElevenLabs TTS
+          response = await window.electronAPI.elevenLabsTTS(text, voiceId);
+        } else {
+          // Get voice gender preference for Google TTS
+          const voiceSettings = localStorage.getItem('voiceGenderSettings');
+          const useMaleVoice = voiceSettings ? JSON.parse(voiceSettings).useMaleVoice : false;
+          const voiceGender = useMaleVoice ? 'MALE' : 'FEMALE';
+          
+          console.log('Using Google voice gender:', voiceGender);
+          
+          // Call Google TTS
+          response = await window.electronAPI.textToSpeech(text, voiceGender);
+        }
+        
+        if (response && response.success) {
+          // Create audio source from base64
+          const audioSrc = `data:audio/mp3;base64,${response.audioContent}`;
+          
+          // Set the audio source and play
+          ttsAudio.src = audioSrc;
+          ttsAudio.play();
+        } else {
+          console.error('TTS error:', response ? response.error : 'No response');
+        }
+      } catch (error) {
+        console.error('Error speaking text:', error);
+      }
+    }
+
+    // Add back n8n settings form submit handler
+    n8nSettingsForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const webhookUrl = document.getElementById('webhook-url').value;
+      const googleApiKey = document.getElementById('google-api-key').value;
+      const elevenLabsApiKey = document.getElementById('elevenlabs-api-key').value;
+      const speechLanguage = document.getElementById('speech-language').value;
+      const preferGemini = useGeminiToggle.checked;
+      
+      // Save settings locally
+      localStorage.setItem('n8nSettings', JSON.stringify({
+        url: webhookUrl
+      }));
+      
+      // Save speech recognition settings
+      localStorage.setItem('speechRecognitionSettings', JSON.stringify({
+        useElevenLabsSTT: useElevenLabsToggle.checked,
+        language: speechLanguage
+      }));
+      
+      // Save API keys to electron store
+      try {
+        if (googleApiKey) {
+          await window.electronAPI.setApiKey('google', googleApiKey);
+        }
+        
+        if (elevenLabsApiKey) {
+          await window.electronAPI.setApiKey('elevenlabs', elevenLabsApiKey);
+        }
+        
+        // Save speech language to electron store
+        await window.electronAPI.setSpeechRecognitionLanguage(speechLanguage);
+        
+        // Save AI mode preference
+        await window.electronAPI.toggleAIMode(preferGemini);
+        
+        // Update UI based on AI mode
+        updateAIModeUI(preferGemini);
+        
+        console.log(`Saving speech language: ${speechLanguage}`);
+        console.log(`Saving AI mode preference: ${preferGemini ? 'Gemini' : 'n8n'}`);
+      } catch (error) {
+        console.error('Error saving settings:', error);
+      }
+      
+      // Remove no-webhook indicator if webhook is set
+      if (webhookUrl) {
+        statusIndicator.classList.remove('no-webhook');
+      }
+      
+      // Close modal
+      settingsModal.style.display = 'none';
+      
+      // Show success message
+      addMessage('Settings saved successfully. Your chat is now connected.', false);
+    });
+
+    // Make window draggable
+    document.querySelector('.chat-popup-header').addEventListener('mousedown', (e) => {
+      window.electronAPI.startDrag();
+    });
+
+    // Chat functionality
+    function addMessage(message, isUser = false) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = isUser ? 'message user' : 'message system';
+      
+      // Format message to handle markdown-like syntax
+      const formattedMessage = formatMessage(message);
+      messageDiv.innerHTML = `<p>${formattedMessage}</p>`;
+      
+      chatMessages.appendChild(messageDiv);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      
+      // Add click to copy functionality
+      messageDiv.addEventListener('click', function() {
+        // Get text content from the message
+        const textToCopy = this.textContent.trim();
+        
+        // Use the Clipboard API to copy the text
+        navigator.clipboard.writeText(textToCopy).then(() => {
+          // Add copied class to show the copied tooltip
+          this.classList.add('copied');
+          
+          // Remove the copied class after the animation completes
+          setTimeout(() => {
+            this.classList.remove('copied');
+          }, 1500);
+        }).catch(err => {
+          console.error('Failed to copy text: ', err);
+        });
+      });
+      
+      // If this is a system message and the chat is minimized, show new message indicator
+      if (!isUser && chatContainer.classList.contains('minimized')) {
+        statusIndicator.classList.add('new-message');
+      }
+    }
+    
+    // Function to format message text with simple markdown-like features
+    function formatMessage(text) {
+      if (!text) return '';
+      
+      // Replace bullet points (Markdown style)
+      text = text.replace(/^\s*\*\s+/gm, '• ');
+      
+      // Replace bold text (Markdown style)
+      text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+      
+      // Process line breaks
+      text = text.replace(/\n/g, '<br>');
+      
+      return text;
+    }
+
+    // Also add click to copy for existing messages
+    document.addEventListener('DOMContentLoaded', function() {
+      const existingMessages = document.querySelectorAll('.message');
+      existingMessages.forEach(message => {
+        message.addEventListener('click', function() {
+          const textToCopy = this.textContent.trim();
+          navigator.clipboard.writeText(textToCopy).then(() => {
+            this.classList.add('copied');
+            setTimeout(() => {
+              this.classList.remove('copied');
+            }, 1500);
+          }).catch(err => {
+            console.error('Failed to copy text: ', err);
+          });
+        });
+      });
+    });
+
+    async function sendMessageToN8n(message) {
+      const settings = JSON.parse(localStorage.getItem('n8nSettings') || '{}');
+      
+      try {
+        // First check if user prefers to use Gemini directly
+        const n8nStatus = await window.electronAPI.checkN8nStatus();
+        
+        if (n8nStatus.preferGemini) {
+          console.log('User preference set to use Gemini AI directly, bypassing n8n');
+          
+          // Set status indicator to processing
+          statusIndicator.classList.add('processing');
+          
+          try {
+            // Call Gemini API directly
+            const geminiResponse = await window.electronAPI.geminiChat(message);
+            
+            // Remove processing indicator
+            statusIndicator.classList.remove('processing');
+            
+            if (geminiResponse.success) {
+              return { message: geminiResponse.response };
+            } else {
+              throw new Error(`Gemini API error: ${geminiResponse.error}`);
+            }
+          } catch (geminiError) {
+            console.error('Error calling Gemini API:', geminiError);
+            statusIndicator.classList.remove('processing');
+            throw new Error(`Failed to get response from Gemini API: ${geminiError.message}`);
+          }
+        }
+        
+        // For webhook configurations, check if valid URL exists first
+        if (settings.url) {
+          console.log('Webhook configured, attempting to use it first');
+          
+        // Debug: Log the webhook URL
+          console.log('Connecting to webhook URL:', settings.url);
+          
+          // Set status indicator to processing (yellow blinking)
+          statusIndicator.classList.add('processing');
+        
+        const headers = {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        };
+        
+        // Try to normalize the URL 
+        let webhookUrl = settings.url;
+        if (webhookUrl.endsWith('/')) {
+          webhookUrl = webhookUrl.slice(0, -1);
+        }
+        
+          try {
+        // Try with a more complete error handling approach
+        const response = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: headers,
+          body: JSON.stringify({ message: message }),
+          mode: 'cors',  // Try with CORS mode
+          cache: 'no-cache'
+        });
+        
+        if (!response.ok) {
+          // Log more details about the failed response
+          console.error('Response not OK:', {
+            status: response.status,
+            statusText: response.statusText,
+            url: response.url
+          });
+          
+          throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+        
+            const data = await response.json();
+            
+            // Remove processing indicator
+            statusIndicator.classList.remove('processing');
+            
+            // Handle case when response is an array
+            if (Array.isArray(data) && data.length > 0) {
+              console.log('Response is an array, using first item:', data[0]);
+              return data[0];
+            }
+        
+        return data;
+          } catch (webhookError) {
+            console.error('Webhook connection error:', webhookError);
+            // Only fall back to Gemini if webhook fails
+            throw webhookError;
+          }
+        }
+        
+        // No webhook configured or webhook failed, check n8n status
+        console.log('No webhook configured or webhook failed, checking n8n status');
+        const n8nStatusCheck = await window.electronAPI.checkN8nStatus();
+        
+        // If n8n is not running or we should use Gemini, use it as a fallback
+        if (!n8nStatusCheck.running || n8nStatusCheck.useGemini) {
+          console.log('n8n unavailable, using Gemini API as fallback');
+          
+          // Set status indicator to processing
+          statusIndicator.classList.add('processing');
+          
+          try {
+            // Call Gemini API directly
+            const geminiResponse = await window.electronAPI.geminiChat(message);
+            
+            // Remove processing indicator
+            statusIndicator.classList.remove('processing');
+            
+            if (geminiResponse.success) {
+              return { message: geminiResponse.response };
+            } else {
+              throw new Error(`Gemini API error: ${geminiResponse.error}`);
+            }
+          } catch (geminiError) {
+            console.error('Error calling Gemini API:', geminiError);
+            statusIndicator.classList.remove('processing');
+            throw new Error(`Failed to get response from Gemini API: ${geminiError.message}`);
+          }
+        } else {
+          // n8n is running but no webhook configured
+          addMessage('Please configure n8n settings first by clicking the settings icon.', false);
+          return null;
+        }
+      } catch (error) {
+        console.error('Error connecting:', error);
+        
+        // Try Gemini as a fallback if we haven't already
+        if (!error.message.includes('Gemini API')) {
+          console.log('Attempting to use Gemini API as fallback after error');
+          
+          try {
+            // Call Gemini API directly
+            const geminiResponse = await window.electronAPI.geminiChat(message);
+            
+            // Remove processing indicator
+            statusIndicator.classList.remove('processing');
+            
+            if (geminiResponse.success) {
+              return { message: geminiResponse.response };
+            } else {
+              console.error('Gemini API error:', geminiResponse.error);
+              // Silently fail and let the original error be shown
+            }
+          } catch (geminiError) {
+            console.error('Error calling Gemini API as fallback:', geminiError);
+            // Continue with original error
+          }
+        }
+        
+        // If Gemini also failed or we didn't try it, show original error
+        addMessage(`I couldn't connect to the backend. Using built-in AI capabilities instead.`, false);
+        
+        // Remove processing indicator
+        statusIndicator.classList.remove('processing');
+        return null;
+      }
+    }
+
+    // Function to handle clicking the send/mic button
+    function handleSendButtonClick() {
+      const message = messageInput.value.trim();
+      const sendIcon = sendButton.querySelector('i');
+      
+      // If there's text in the input, send the message
+      if (message) {
+        handleSend();
+      } 
+      // If the input is empty, activate the microphone
+      else {
+        startVoiceInput();
+      }
+    }
+    
+    // Function to actually send a message
+    function handleSend() {
+      const message = messageInput.value.trim();
+      if (message) {
+        // Add user message
+        addMessage(message, true);
+        messageInput.value = '';
+        
+        // Reset the send button to mic icon
+        const sendIcon = sendButton.querySelector('i');
+        sendIcon.className = 'fas fa-microphone';
+        sendIcon.style.color = '';
+        sendButton.title = 'Voice input';
+        
+        // Check if n8n is configured or if we're using Gemini directly
+        const settings = JSON.parse(localStorage.getItem('n8nSettings') || '{}');
+        const n8nConfigured = settings.url && !useGeminiToggle.checked;
+        
+        if (n8nConfigured) {
+          // Show typing indicator
+          const typingIndicator = document.createElement('div');
+          typingIndicator.className = 'message system typing';
+          typingIndicator.innerHTML = `
+            <div class="typing-animation">
+              <div class="typing-dot"></div>
+              <div class="typing-dot"></div>
+              <div class="typing-dot"></div>
+            </div>
+          `;
+          chatMessages.appendChild(typingIndicator);
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+          
+          // Send to n8n
+          sendMessageToN8n(message).then(response => {
+            // Remove typing indicator
+            typingIndicator.remove();
+            
+            // Process the response
+            if (response) {
+              // If response is an array, use the first item
+              const responseData = Array.isArray(response) && response.length > 0 ? response[0] : response;
+              
+              if (responseData && responseData.message) {
+                addMessage(responseData.message, false);
+                // Call speakText to read assistant's message
+                speakText(responseData.message);
+              } else if (response && response.message) {
+                // Fallback to direct response.message check
+              addMessage(response.message, false);
+                // Call speakText to read assistant's message
+                speakText(response.message);
+              } else {
+                // No message property found
+                const errorMsg = "Received a response but couldn't find a message. Check n8n workflow output format.";
+                addMessage(errorMsg, false);
+                // Call speakText for error message
+                speakText(errorMsg);
+              }
+            }
+          });
+        } else {
+          // Using Gemini directly or no webhook configured
+          // Show typing indicator
+          const typingIndicator = document.createElement('div');
+          typingIndicator.className = 'message system typing';
+          typingIndicator.innerHTML = `
+            <div class="typing-animation">
+              <div class="typing-dot"></div>
+              <div class="typing-dot"></div>
+              <div class="typing-dot"></div>
+            </div>
+          `;
+          chatMessages.appendChild(typingIndicator);
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+          
+          // Send to Gemini
+          sendMessageToN8n(message).then(response => {
+            // Remove typing indicator
+            typingIndicator.remove();
+            
+            // Process the response
+            if (response) {
+              if (response.message) {
+                addMessage(response.message, false);
+                // Call speakText to read assistant's message
+                speakText(response.message);
+                
+                // Show memory indicator if this is at least the 2nd message
+                const messageCount = document.querySelectorAll('.message').length;
+                if (messageCount >= 4 && useGeminiToggle && useGeminiToggle.checked) {
+                  showMemoryIndicator();
+                }
+              } else {
+                // No message property found
+                const errorMsg = "Received a response but couldn't find a message.";
+                addMessage(errorMsg, false);
+                // Call speakText for error message
+                speakText(errorMsg);
+              }
+            }
+          });
+        }
+      }
+    }
+    
+    // Function to show a memory indicator when Gemini is using conversation history
+    function showMemoryIndicator() {
+      // Check if an indicator already exists
+      if (document.querySelector('.memory-indicator')) {
+        return;
+      }
+      
+      const memoryIndicator = document.createElement('div');
+      memoryIndicator.className = 'message system info memory-indicator';
+      memoryIndicator.innerHTML = `<p><i class="fas fa-brain"></i> Neo is now using conversation history to provide more contextual responses.</p>`;
+      chatMessages.appendChild(memoryIndicator);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      
+      // Fade out the indicator after 5 seconds
+      setTimeout(() => {
+        memoryIndicator.style.opacity = '0';
+        setTimeout(() => {
+          memoryIndicator.remove();
+        }, 1000); // Wait for fade animation to complete
+      }, 5000);
+    }
+
+    // Add audio elements for mic sounds
+    const micMuteSound = document.createElement('audio');
+    micMuteSound.src = 'sounds/discordmute.mp3';
+    document.body.appendChild(micMuteSound);
+    
+    const micUnmuteSound = document.createElement('audio');
+    micUnmuteSound.src = 'sounds/unmute-sound.mp3';
+    document.body.appendChild(micUnmuteSound);
+    
+    // Function to start voice input when the mic button is clicked
+    function startVoiceInput() {
+      // Store current classes to restore later if needed
+      const currentClasses = [...statusIndicator.classList];
+      
+      // Remove all status classes but keep other classes
+      statusIndicator.classList.remove('n8n-connected', 'n8n-disconnected', 'no-webhook', 'processing', 'new-message');
+      
+      // Add mic-active class to status indicator
+      statusIndicator.classList.add('mic-active');
+      
+      // Check if user wants to use ElevenLabs or browser recognition
+      const savedSettings = localStorage.getItem('speechRecognitionSettings');
+      const useElevenLabsSTT = savedSettings ? JSON.parse(savedSettings).useElevenLabsSTT : true;
+      
+      // If user prefers browser recognition, use it directly
+      if (!useElevenLabsSTT) {
+        console.log("Using browser's built-in speech recognition (free)");
+        useBrowserSpeechRecognition();
+        return;
+      }
+      
+      // Otherwise, use ElevenLabs API (with recording)
+      console.log("Using ElevenLabs Speech-to-Text API");
+      
+      // Show recording indicator
+      const sendIcon = sendButton.querySelector('i');
+      sendIcon.className = 'fas fa-circle';
+      sendIcon.style.color = '#00DCD4';
+      sendButton.title = 'Recording...';
+      
+      // Create variables for recording
+      let mediaRecorder;
+      let audioChunks = [];
+      let isRecording = false;
+      
+      // Variables for silence detection
+      let silenceStart = null;
+      const silenceThreshold = 3; // Lower threshold for silence detection (more sensitive)
+      const silenceDelay = 2500; // Wait longer (2.5 seconds) before stopping on silence
+      
+      // Track recording start time for minimum duration
+      const recordingStartTime = Date.now();
+      const minimumRecordingTime = 3000; // Minimum 3 seconds of recording
+      
+      // Request microphone access
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+          // Create media recorder with proper MIME type
+          const mimeType = 'audio/webm;codecs=opus';
+          mediaRecorder = new MediaRecorder(stream, { mimeType });
+          
+          // Set up audio analysis for silence detection
+          const audioContext = new AudioContext();
+          const audioStreamSource = audioContext.createMediaStreamSource(stream);
+          const analyser = audioContext.createAnalyser();
+          analyser.fftSize = 512;
+          analyser.minDecibels = -85;
+          analyser.maxDecibels = -10;
+          analyser.smoothingTimeConstant = 0.85;
+          audioStreamSource.connect(analyser);
+          
+          const bufferLength = analyser.fftSize;
+          const dataArray = new Uint8Array(bufferLength);
+          
+          // Start recording
+          mediaRecorder.start();
+          isRecording = true;
+          console.log("Recording started with MIME type:", mimeType);
+          
+          // Collect audio chunks
+          mediaRecorder.addEventListener("dataavailable", event => {
+            audioChunks.push(event.data);
+          });
+          
+          // Setup silence detection
+          const silenceDetectionInterval = setInterval(() => {
+            if (!isRecording) {
+              clearInterval(silenceDetectionInterval);
+              return;
+            }
+            
+            analyser.getByteFrequencyData(dataArray);
+            
+            // Calculate audio level
+            let sum = 0;
+            for (let i = 0; i < bufferLength; i++) {
+              sum += dataArray[i];
+            }
+            const average = sum / bufferLength;
+            
+            // Detect silence
+            if (average < silenceThreshold) {
+              if (!silenceStart) {
+                silenceStart = Date.now();
+              } else if (Date.now() - silenceStart > silenceDelay) {
+                // Check if we've recorded for at least the minimum time
+                const recordingDuration = Date.now() - recordingStartTime;
+                if (recordingDuration >= minimumRecordingTime) {
+                  console.log("Silence detected for " + silenceDelay + "ms and minimum recording time reached, stopping recording");
+                  clearInterval(silenceDetectionInterval);
+                  if (isRecording) {
+                    stopRecording();
+                  }
+                } else {
+                  console.log("Silence detected but minimum recording time not reached yet");
+                }
+              }
+            } else {
+              silenceStart = null;
+            }
+          }, 100);
+          
+          // Handle when recording stops
+          mediaRecorder.addEventListener("stop", async () => {
+            console.log("Recording stopped");
+            
+            // Clear any detection intervals
+            clearInterval(silenceDetectionInterval);
+            
+            // Create audio blob with webm format
+            const audioBlob = new Blob(audioChunks, { type: mimeType });
+            console.log("Audio blob created:", audioBlob.size, "bytes");
+            
+            // Convert blob to base64
+            const reader = new FileReader();
+            reader.readAsDataURL(audioBlob);
+            reader.onloadend = async function() {
+              // Get base64 audio data (remove data URL prefix)
+              const base64Audio = reader.result.split(',')[1];
+              
+              // Show processing message
+              sendIcon.className = 'fas fa-cog fa-spin';
+              sendIcon.style.color = '#00DCD4';
+              sendButton.title = 'Processing...';
+              
+              try {
+                console.log("Sending audio to speech recognition...");
+                // Send to ElevenLabs Speech-to-Text API via main process
+                const result = await window.electronAPI.elevenLabsSTT(base64Audio);
+                
+                // Remove mic-active class from status indicator
+                statusIndicator.classList.remove('mic-active');
+                // Restore appropriate status
+                restoreStatusIndicator();
+                
+                if (result.success) {
+                  const recognizedText = result.text;
+                  console.log("Speech recognized:", recognizedText);
+                  
+                  // Update button to mic icon
+                  sendIcon.className = 'fas fa-microphone';
+                  sendIcon.style.color = '';
+                  sendButton.title = 'Voice input';
+                  
+                  // Filter out sound descriptions before sending
+                  const filteredText = filterSoundDescriptions(recognizedText);
+                  
+                  // Directly send recognized text instead of showing in input
+                  if (filteredText.trim() !== '') {
+                    // Add user message to chat (will be hidden but stored) with original text
+                    addMessage(recognizedText, true);
+                    
+                    // Send filtered text to webhook
+                    const settings = JSON.parse(localStorage.getItem('n8nSettings') || '{}');
+                    if (settings.url) {
+                      // Show typing indicator
+                      const typingIndicator = document.createElement('div');
+                      typingIndicator.className = 'message system typing';
+                      typingIndicator.innerHTML = `
+                        <div class="typing-animation">
+                          <div class="typing-dot"></div>
+                          <div class="typing-dot"></div>
+                          <div class="typing-dot"></div>
+                        </div>
+                      `;
+                      chatMessages.appendChild(typingIndicator);
+                      chatMessages.scrollTop = chatMessages.scrollHeight;
+                      
+                      // Send to n8n
+                      sendMessageToN8n(filteredText).then(response => {
+                        // Remove typing indicator
+                        typingIndicator.remove();
+                        
+                        // Process the response
+                        if (response) {
+                          // If response is an array, use the first item
+                          const responseData = Array.isArray(response) && response.length > 0 ? response[0] : response;
+                          
+                          if (responseData && responseData.message) {
+                            addMessage(responseData.message, false);
+                            // Call speakText to read assistant's message
+                            speakText(responseData.message);
+                          } else if (response && response.message) {
+                            // Fallback to direct response.message check
+                            addMessage(response.message, false);
+                            // Call speakText to read assistant's message
+                            speakText(response.message);
+                          } else {
+                            // No message property found
+                            const errorMsg = "Received a response but couldn't find a message. Check n8n workflow output format.";
+                            addMessage(errorMsg, false);
+                            // Call speakText for error message
+                            speakText(errorMsg);
+                          }
+                        }
+                      });
+                    } else {
+                      // Just simulate a response
+                      setTimeout(() => {
+                        const configMsg = 'To connect this chat to your n8n workflow, please click the settings icon and configure your n8n instance.';
+                        addMessage(configMsg, false);
+                        // Call speakText for config message
+                        speakText(configMsg);
+                        // Add green blinking to indicate no webhook is set
+                        statusIndicator.classList.add('no-webhook');
+                      }, 1000);
+                    }
+                  }
+                } else if (result.useBrowser) {
+                  // Fallback to browser's speech recognition
+                  console.log("Falling back to browser's speech recognition");
+                  stopAllTracks();
+                  useBrowserSpeechRecognition();
+                  return;
+                } else {
+                  console.error("Speech recognition error:", result.error);
+                  addMessage("Sorry, I couldn't understand that. Please try again.", false);
+                  // Call speakText for error message
+                  speakText("Sorry, I couldn't understand that. Please try again.");
+                }
+              } catch (error) {
+                console.error("Error processing speech:", error);
+                addMessage("There was an error processing your speech. Please try again.", false);
+                // Call speakText for error message
+                speakText("There was an error processing your speech. Please try again.");
+                
+                // Reset button
+                sendIcon.className = 'fas fa-microphone';
+                sendIcon.style.color = '';
+                sendButton.title = 'Voice input';
+                
+                // Remove mic-active class from status indicator
+                statusIndicator.classList.remove('mic-active');
+                // Restore appropriate status
+                restoreStatusIndicator();
+              }
+              
+              // Stop all tracks to release microphone
+              stopAllTracks();
+            };
+          });
+          
+          // Function to stop all tracks
+          function stopAllTracks() {
+            stream.getTracks().forEach(track => track.stop());
+          }
+          
+          // Stop recording after 30 seconds or when button is clicked again
+          const maxRecordingTime = 30000; // 30 seconds
+          const recordingTimeout = setTimeout(() => {
+            if (isRecording) {
+              stopRecording();
+            }
+          }, maxRecordingTime);
+          
+          // Add click listener to stop recording when button is clicked again
+          sendButton.addEventListener('click', function stopRecordingOnClick() {
+            if (isRecording) {
+              clearTimeout(recordingTimeout);
+              stopRecording();
+              // Remove this listener after it's used
+              sendButton.removeEventListener('click', stopRecordingOnClick);
+            }
+          }, { once: true });
+          
+          function stopRecording() {
+            if (isRecording && mediaRecorder.state !== 'inactive') {
+              mediaRecorder.stop();
+              isRecording = false;
+              console.log("Recording stopped manually");
+              // Play mute sound
+              micMuteSound.play();
+            }
+          }
+        })
+        .catch(err => {
+          console.error("Error accessing microphone:", err);
+          addMessage("Microphone access denied. Please check your browser permissions.", false);
+          // Call speakText for error message
+          speakText("Microphone access denied. Please check your browser permissions.");
+          
+          // Reset button
+          sendIcon.className = 'fas fa-microphone';
+          sendIcon.style.color = '';
+          sendButton.title = 'Voice input';
+          
+          // Remove mic-active class from status indicator
+          statusIndicator.classList.remove('mic-active');
+          // Restore appropriate status
+          restoreStatusIndicator();
+        });
+    }
+
+    // Function to use browser's built-in speech recognition as fallback
+    function useBrowserSpeechRecognition() {
+      // Check if the browser supports the Web Speech API
+      if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'en-US';
+        recognition.interimResults = false;
+        
+        // Show recording indicator
+        const sendIcon = sendButton.querySelector('i');
+        sendIcon.className = 'fas fa-circle';
+        sendIcon.style.color = '#00DCD4';
+        sendButton.title = 'Recording...';
+        
+        // Start speech recognition
+        recognition.start();
+        
+        // Handle speech recognition results
+        recognition.onresult = function(event) {
+          const transcript = event.results[0][0].transcript;
+          console.log("Browser speech recognized:", transcript);
+          
+          // Remove mic-active class from status indicator
+          statusIndicator.classList.remove('mic-active');
+          // Restore appropriate status
+          restoreStatusIndicator();
+          
+          // Filter out sound descriptions before sending
+          const filteredText = filterSoundDescriptions(transcript);
+          
+          // Directly send recognized text instead of showing in input
+          if (filteredText.trim() !== '') {
+            // Add user message to chat (will be hidden but stored) with original text
+            addMessage(transcript, true);
+            
+            // Send filtered text to webhook
+            const settings = JSON.parse(localStorage.getItem('n8nSettings') || '{}');
+            if (settings.url) {
+              // Show typing indicator
+              const typingIndicator = document.createElement('div');
+              typingIndicator.className = 'message system typing';
+              typingIndicator.innerHTML = `
+                <div class="typing-animation">
+                  <div class="typing-dot"></div>
+                  <div class="typing-dot"></div>
+                  <div class="typing-dot"></div>
+                </div>
+              `;
+              chatMessages.appendChild(typingIndicator);
+              chatMessages.scrollTop = chatMessages.scrollHeight;
+              
+              // Send to n8n
+              sendMessageToN8n(filteredText).then(response => {
+                // Remove typing indicator
+                typingIndicator.remove();
+                
+                // Process the response
+                if (response) {
+                  // If response is an array, use the first item
+                  const responseData = Array.isArray(response) && response.length > 0 ? response[0] : response;
+                  
+                  if (responseData && responseData.message) {
+                    addMessage(responseData.message, false);
+                    // Call speakText to read assistant's message
+                    speakText(responseData.message);
+                  } else if (response && response.message) {
+                    // Fallback to direct response.message check
+                    addMessage(response.message, false);
+                    // Call speakText to read assistant's message
+                    speakText(response.message);
+                  } else {
+                    // No message property found
+                    const errorMsg = "Received a response but couldn't find a message. Check n8n workflow output format.";
+                    addMessage(errorMsg, false);
+                    // Call speakText for error message
+                    speakText(errorMsg);
+                  }
+                }
+              });
+            } else {
+              // Just simulate a response
+              setTimeout(() => {
+                const configMsg = 'To connect this chat to your n8n workflow, please click the settings icon and configure your n8n instance.';
+                addMessage(configMsg, false);
+                // Call speakText for config message
+                speakText(configMsg);
+                // Add green blinking to indicate no webhook is set
+                statusIndicator.classList.add('no-webhook');
+              }, 1000);
+            }
+          }
+        };
+        
+        // Handle end of speech recognition
+        recognition.onend = function() {
+          // Reset button if no speech was recognized
+          if (messageInput.value.trim() === '') {
+            sendIcon.className = 'fas fa-microphone';
+            sendIcon.style.color = '';
+            sendButton.title = 'Voice input';
+          }
+          
+          // Remove mic-active class from status indicator
+          statusIndicator.classList.remove('mic-active');
+          
+          // Restore appropriate status based on n8n state
+          restoreStatusIndicator();
+        };
+        
+        // Handle errors
+        recognition.onerror = function(event) {
+          console.error('Speech recognition error:', event.error);
+          sendIcon.className = 'fas fa-microphone';
+          sendIcon.style.color = '';
+          sendButton.title = 'Voice input';
+          
+          // Remove mic-active class from status indicator
+          statusIndicator.classList.remove('mic-active');
+          
+          // Restore appropriate status based on n8n state
+          restoreStatusIndicator();
+          
+          if (event.error === 'not-allowed') {
+            addMessage('Microphone access denied. Please check your browser permissions.', false);
+            // Call speakText for error message
+            speakText("Microphone access denied. Please check your browser permissions.");
+          }
+        };
+      } else {
+        // Browser doesn't support speech recognition
+        addMessage('Voice input is not supported in this browser.', false);
+        
+        // Reset button
+        const sendIcon = sendButton.querySelector('i');
+        sendIcon.className = 'fas fa-microphone';
+        sendIcon.style.color = '';
+        sendButton.title = 'Voice input';
+        
+        // Remove mic-active class from status indicator
+        statusIndicator.classList.remove('mic-active');
+        // Restore appropriate status
+        restoreStatusIndicator();
+      }
+    }
+
+    // Update event listeners
+    sendButton.addEventListener('click', handleSendButtonClick);
+    messageInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSend();
+      }
+    });
+
+    // Test webhook connection
+    const testWebhookBtn = document.getElementById('test-webhook');
+    const testResult = document.getElementById('test-result');
+
+    testWebhookBtn.addEventListener('click', async () => {
+      const webhookUrl = document.getElementById('webhook-url').value.trim();
+      if (!webhookUrl) {
+        testResult.innerHTML = '<span class="error">Please enter a webhook URL first</span>';
+        return;
+      }
+      
+      testResult.innerHTML = '<span class="pending">Testing connection...</span>';
+      console.log('Testing webhook URL:', webhookUrl);
+      
+      try {
+        // Normalize URL
+        let normalizedUrl = webhookUrl;
+        if (normalizedUrl.endsWith('/')) {
+          normalizedUrl = normalizedUrl.slice(0, -1);
+        }
+        
+        const response = await fetch(normalizedUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({ message: "Test message from chat app" }),
+          mode: 'cors',  // Try with CORS mode
+          cache: 'no-cache'
+        }).catch(error => {
+          console.error('Network test error:', error);
+          throw new Error(`Network error: ${error.message}`);
+        });
+        
+        if (response.ok) {
+          const data = await response.json().catch(() => {
+            throw new Error("Response wasn't valid JSON. Check your n8n workflow output format.");
+          });
+          
+          // Handle case when response is an array
+          if (Array.isArray(data) && data.length > 0) {
+            console.log('Test response is an array, first item:', data[0]);
+          }
+        
+        testResult.innerHTML = '<span class="success">Connection successful! ✓</span>';
+        console.log('Webhook test successful:', data);
+      } else {
+        console.error('Test response not OK:', {
+          status: response.status,
+          statusText: response.statusText,
+          url: response.url
+        });
+        
+        testResult.innerHTML = `<span class="error">Error ${response.status}: ${response.statusText}</span>`;
+      }
+    } catch (error) {
+      testResult.innerHTML = `<span class="error">Connection failed: ${error.message}</span>`;
+      console.error('Webhook test error:', error);
+    }
+  });
+
+    // Add event listener for minimized mic button
+    minimizedMicBtn.addEventListener('click', () => {
+      // Call the same function as the regular mic button
+      handleSendButtonClick();
+    });
+
+    // Function to handle voice input in minimized state
+    function startVoiceInputMinimized() {
+      // Store current classes to restore later if needed
+      const currentClasses = [...statusIndicator.classList];
+      
+      // Remove all status classes but keep other classes
+      statusIndicator.classList.remove('n8n-connected', 'n8n-disconnected', 'no-webhook', 'processing', 'new-message');
+      
+      // Add mic-active class to status indicator
+      statusIndicator.classList.add('mic-active');
+      
+      // Check if user wants to use browser recognition or Google API
+      const savedSettings = localStorage.getItem('speechRecognitionSettings');
+      const useGoogleApi = savedSettings ? JSON.parse(savedSettings).useGoogleApi : false;
+      
+      if (!useGoogleApi) {
+        useBrowserSpeechRecognitionMinimized();
+      } else {
+        // For Google's API, we need to handle recording specially for minimized state
+        startGoogleSpeechRecognitionMinimized();
+      }
+    }
+    
+    // Function to use browser's built-in speech recognition in minimized state
+    function useBrowserSpeechRecognitionMinimized() {
+      if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'en-US';
+        recognition.interimResults = false;
+        
+        // Start speech recognition
+        recognition.start();
+        
+        // Handle speech recognition results
+        recognition.onresult = function(event) {
+          const transcript = event.results[0][0].transcript;
+          console.log("Browser speech recognized:", transcript);
+          
+          // Remove mic-active class from status indicator
+          statusIndicator.classList.remove('mic-active');
+          // Restore appropriate status
+          restoreStatusIndicator();
+          
+          // Filter out sound descriptions before sending
+          const filteredText = filterSoundDescriptions(transcript);
+          
+          // Directly send recognized text instead of showing in input
+          if (filteredText.trim() !== '') {
+            // Add user message to chat (will be hidden but stored) with original text
+            addMessage(transcript, true);
+            
+            // Send filtered text to webhook
+            const settings = JSON.parse(localStorage.getItem('n8nSettings') || '{}');
+            if (settings.url) {
+              // Send to n8n
+              sendMessageToN8n(filteredText).then(response => {
+                // Process the response
+                if (response) {
+                  // If response is an array, use the first item
+                  const responseData = Array.isArray(response) && response.length > 0 ? response[0] : response;
+                  
+                  if (responseData && responseData.message) {
+                    addMessage(responseData.message, false);
+                    // Call speakText to read assistant's message
+                    speakText(responseData.message);
+                  } else if (response && response.message) {
+                    // Fallback to direct response.message check
+                    addMessage(response.message, false);
+                    // Call speakText to read assistant's message
+                    speakText(response.message);
+                  } else {
+                    // No message property found
+                    const errorMsg = "Received a response but couldn't find a message. Check n8n workflow output format.";
+                    addMessage(errorMsg, false);
+                    // Call speakText for error message
+                    speakText(errorMsg);
+                  }
+                }
+              });
+            } else {
+              // Just simulate a response
+              setTimeout(() => {
+                const configMsg = 'To connect this chat to your n8n workflow, please click the settings icon and configure your n8n instance.';
+                addMessage(configMsg, false);
+                // Call speakText for config message
+                speakText(configMsg);
+                // Add green blinking to indicate no webhook is set
+                statusIndicator.classList.add('no-webhook');
+              }, 1000);
+            }
+          }
+        };
+        
+        // Handle end of speech recognition
+        recognition.onend = function() {
+          // Reset status indicator
+          statusIndicator.classList.remove('mic-active');
+        };
+        
+        // Handle errors
+        recognition.onerror = function(event) {
+          console.error('Speech recognition error:', event.error);
+          // Reset status indicator
+          statusIndicator.classList.remove('mic-active');
+          
+          if (event.error === 'not-allowed') {
+            addMessage('Microphone access denied. Please check your browser permissions.', false);
+            // Call speakText for error message
+            speakText("Microphone access denied. Please check your browser permissions.");
+          }
+        };
+      } else {
+        // Browser doesn't support speech recognition
+        addMessage('Voice input is not supported in this browser.', false);
+        // Reset status indicator
+        statusIndicator.classList.remove('mic-active');
+        // Restore appropriate status
+        restoreStatusIndicator();
+      }
+    }
+    
+    // Function for Google Speech API in minimized state
+    function startGoogleSpeechRecognitionMinimized() {
+      // Create variables for recording
+      let mediaRecorder;
+      let audioChunks = [];
+      let isRecording = false;
+      
+      // Request microphone access
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+          // Create media recorder with proper MIME type
+          const mimeType = 'audio/webm;codecs=opus';
+          mediaRecorder = new MediaRecorder(stream, { mimeType });
+          
+          // Set up audio analysis for silence detection
+          const audioContext = new AudioContext();
+          const audioStreamSource = audioContext.createMediaStreamSource(stream);
+          const analyser = audioContext.createAnalyser();
+          analyser.fftSize = 512;
+          analyser.minDecibels = -85;
+          analyser.maxDecibels = -10;
+          analyser.smoothingTimeConstant = 0.85;
+          audioStreamSource.connect(analyser);
+          
+          const bufferLength = analyser.fftSize;
+          const dataArray = new Uint8Array(bufferLength);
+          
+          // Variables for silence detection
+          let silenceStart = null;
+          const silenceThreshold = 3; // Lower threshold for silence detection (more sensitive)
+          const silenceDelay = 2500; // Wait longer (2.5 seconds) before stopping on silence
+          
+          // Track recording start time for minimum duration
+          const recordingStartTime = Date.now();
+          const minimumRecordingTime = 3000; // Minimum 3 seconds of recording
+          
+          // Start recording
+          mediaRecorder.start();
+          isRecording = true;
+          console.log("Recording started with MIME type:", mimeType);
+          
+          // Collect audio chunks
+          mediaRecorder.addEventListener("dataavailable", event => {
+            audioChunks.push(event.data);
+          });
+          
+          // Setup silence detection
+          const silenceDetectionInterval = setInterval(() => {
+            if (!isRecording) {
+              clearInterval(silenceDetectionInterval);
+              return;
+            }
+            
+            analyser.getByteFrequencyData(dataArray);
+            
+            // Calculate audio level
+            let sum = 0;
+            for (let i = 0; i < bufferLength; i++) {
+              sum += dataArray[i];
+            }
+            const average = sum / bufferLength;
+            
+            // Detect silence
+            if (average < silenceThreshold) {
+              if (!silenceStart) {
+                silenceStart = Date.now();
+              } else if (Date.now() - silenceStart > silenceDelay) {
+                // Check if we've recorded for at least the minimum time
+                const recordingDuration = Date.now() - recordingStartTime;
+                if (recordingDuration >= minimumRecordingTime) {
+                  console.log("Silence detected for " + silenceDelay + "ms and minimum recording time reached, stopping recording");
+                  clearInterval(silenceDetectionInterval);
+                  if (isRecording) {
+                    stopRecording();
+                  }
+                } else {
+                  console.log("Silence detected but minimum recording time not reached yet");
+                }
+              }
+            } else {
+              silenceStart = null;
+            }
+          }, 100);
+          
+          // Handle when recording stops
+          mediaRecorder.addEventListener("stop", async () => {
+            console.log("Recording stopped");
+            
+            // Clear any detection intervals
+            clearInterval(silenceDetectionInterval);
+            
+            // Create audio blob with webm format
+            const audioBlob = new Blob(audioChunks, { type: mimeType });
+            console.log("Audio blob created:", audioBlob.size, "bytes");
+            
+            // Convert blob to base64
+            const reader = new FileReader();
+            reader.readAsDataURL(audioBlob);
+            reader.onloadend = async function() {
+              // Get base64 audio data (remove data URL prefix)
+              const base64Audio = reader.result.split(',')[1];
+              
+              try {
+                console.log("Sending audio to speech recognition...");
+                // Send to Google Speech API via main process
+                const result = await window.electronAPI.recognizeSpeech(base64Audio);
+                
+                // Remove mic-active class from status indicator
+                statusIndicator.classList.remove('mic-active');
+                // Restore appropriate status
+                restoreStatusIndicator();
+                
+                if (result.success) {
+                  const recognizedText = result.text;
+                  console.log("Speech recognized:", recognizedText);
+                  
+                  // Filter out sound descriptions before sending
+                  const filteredText = filterSoundDescriptions(recognizedText);
+                  
+                  // Directly send recognized text instead of showing in input
+                  if (filteredText.trim() !== '') {
+                    // Add user message to chat (will be hidden but stored) with original text
+                    addMessage(recognizedText, true);
+                    
+                    // Send filtered text to webhook
+                    const settings = JSON.parse(localStorage.getItem('n8nSettings') || '{}');
+                    if (settings.url) {
+                      // Send to n8n
+                      sendMessageToN8n(filteredText).then(response => {
+                        // Process the response
+                        if (response) {
+                          // If response is an array, use the first item
+                          const responseData = Array.isArray(response) && response.length > 0 ? response[0] : response;
+                          
+                          if (responseData && responseData.message) {
+                            addMessage(responseData.message, false);
+                            // Call speakText to read assistant's message
+                            speakText(responseData.message);
+                          } else if (response && response.message) {
+                            // Fallback to direct response.message check
+                            addMessage(response.message, false);
+                            // Call speakText to read assistant's message
+                            speakText(response.message);
+                          } else {
+                            // No message property found
+                            const errorMsg = "Received a response but couldn't find a message. Check n8n workflow output format.";
+                            addMessage(errorMsg, false);
+                            // Call speakText for error message
+                            speakText(errorMsg);
+                          }
+                        }
+                      });
+                    } else {
+                      // Just simulate a response
+                      setTimeout(() => {
+                        const configMsg = 'To connect this chat to your n8n workflow, please click the settings icon and configure your n8n instance.';
+                        addMessage(configMsg, false);
+                        // Call speakText for config message
+                        speakText(configMsg);
+                        // Add green blinking to indicate no webhook is set
+                        statusIndicator.classList.add('no-webhook');
+                      }, 1000);
+                    }
+                  }
+                } else if (result.useBrowser) {
+                  // Fallback to browser's speech recognition
+                  console.log("Falling back to browser's speech recognition");
+                  stopAllTracks();
+                  useBrowserSpeechRecognitionMinimized();
+                  return;
+                } else {
+                  console.error("Speech recognition error:", result.error);
+                  addMessage("Sorry, I couldn't understand that. Please try again.", false);
+                  // Call speakText for error message
+                  speakText("Sorry, I couldn't understand that. Please try again.");
+                }
+              } catch (error) {
+                console.error("Error processing speech:", error);
+                addMessage("There was an error processing your speech. Please try again.", false);
+                // Call speakText for error message
+                speakText("There was an error processing your speech. Please try again.");
+                
+                // Reset button
+                sendIcon.className = 'fas fa-microphone';
+                sendIcon.style.color = '';
+                sendButton.title = 'Voice input';
+                
+                // Remove mic-active class from status indicator
+                statusIndicator.classList.remove('mic-active');
+                // Restore appropriate status
+                restoreStatusIndicator();
+              }
+              
+              // Stop all tracks to release microphone
+              stopAllTracks();
+            };
+          });
+          
+          // Function to stop all tracks
+          function stopAllTracks() {
+            stream.getTracks().forEach(track => track.stop());
+          }
+          
+          // Stop recording after 30 seconds or when button is clicked again
+          const maxRecordingTime = 30000; // 30 seconds
+          const recordingTimeout = setTimeout(() => {
+            if (isRecording) {
+              stopRecording();
+            }
+          }, maxRecordingTime);
+          
+          // Add click listener to stop recording when button is clicked again
+          minimizedMicBtn.addEventListener('click', function stopRecordingOnClick() {
+            if (isRecording) {
+              clearTimeout(recordingTimeout);
+              stopRecording();
+              // Remove this listener after it's used
+              minimizedMicBtn.removeEventListener('click', stopRecordingOnClick);
+            }
+          }, { once: true });
+          
+          function stopRecording() {
+            if (isRecording && mediaRecorder.state !== 'inactive') {
+              mediaRecorder.stop();
+              isRecording = false;
+              console.log("Recording stopped manually");
+              // Play mute sound
+              micMuteSound.play();
+            }
+          }
+        })
+        .catch(err => {
+          console.error("Error accessing microphone:", err);
+          addMessage("Microphone access denied. Please check your browser permissions.", false);
+          // Call speakText for error message
+          speakText("Microphone access denied. Please check your browser permissions.");
+          
+          // Reset button
+          sendIcon.className = 'fas fa-microphone';
+          sendIcon.style.color = '';
+          sendButton.title = 'Voice input';
+          
+          // Remove mic-active class from status indicator
+          statusIndicator.classList.remove('mic-active');
+          // Restore appropriate status
+          restoreStatusIndicator();
+        });
+    }
+
+    // Function to restore appropriate status based on n8n state
+    function restoreStatusIndicator() {
+      // Check if n8n is connected
+      const savedSettings = localStorage.getItem('n8nSettings');
+      if (savedSettings && JSON.parse(savedSettings).url) {
+        statusIndicator.classList.remove('no-webhook');
+        statusIndicator.classList.add('n8n-connected');
+        statusIndicator.style.background = '#00DCD4'; // Turquoise color to match Neo logo
+        statusIndicator.style.boxShadow = '0 0 10px #00DCD4, 0 0 20px rgba(0, 220, 212, 0.5)';
+      } else {
+        statusIndicator.classList.remove('n8n-connected');
+        statusIndicator.classList.add('n8n-disconnected');
+        statusIndicator.style.background = '';
+        statusIndicator.style.boxShadow = '';
+      }
+    }
+
+    // Listen for dependency status updates
+    document.addEventListener('dependency-status', (event) => {
+      console.log('Dependency status update:', event.detail);
+      
+      const status = event.detail;
+      const statusIndicator = document.querySelector('.status-indicator');
+      
+      if (!status.allDependenciesInstalled) {
+        // There are missing dependencies
+        statusIndicator.classList.remove('n8n-connected', 'n8n-disconnected', 'no-webhook', 'processing');
+        statusIndicator.classList.add('error');
+        
+        // Show warning message about missing dependencies
+        const missingDeps = status.missingDependencies.join(', ');
+        addMessage(`Warning: Some dependencies are missing (${missingDeps}). Some features may not work correctly.`, false);
+      }
+      
+      if (status.n8n && !status.n8n.installed) {
+        // n8n is not installed
+        statusIndicator.classList.remove('n8n-connected', 'n8n-disconnected');
+        statusIndicator.classList.add('gemini-mode');
+        statusIndicator.style.background = '';
+        statusIndicator.style.boxShadow = '';
+        
+        // Update the model indicator text
+        const modelIndicator = document.querySelector('.model-indicator');
+        if (modelIndicator) {
+          modelIndicator.textContent = 'Neo';
+        }
+        
+        addMessage(`n8n is not installed. Using advanced AI to assist you.`, false);
+      }
+    });
+
+    // Check dependency status on load
+    window.addEventListener('DOMContentLoaded', async () => {
+      try {
+        // Get dependency status
+        const dependencyStatus = await window.electronAPI.getDependencyStatus();
+        console.log('Initial dependency status:', dependencyStatus);
+        
+        // Create an event with the status
+        document.dispatchEvent(new CustomEvent('dependency-status', { 
+          detail: dependencyStatus
+        }));
+      } catch (error) {
+        console.error('Error checking dependency status:', error);
+      }
+    });
+
+    // Function to filter out sound descriptions in parentheses
+    function filterSoundDescriptions(text) {
+      // Remove patterns like "(techno music)", "(heartbeats)", etc.
+      return text.replace(/\([^)]+\)/g, '').trim();
+    }
+  </script>
+</body>
+</html>

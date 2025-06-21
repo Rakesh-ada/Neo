@@ -1,0 +1,77 @@
+{
+  "name": "deep-ai-chat",
+  "version": "1.0.0",
+  "description": "A floating chat interface desktop application using n8n",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "clean": "rimraf dist node_modules/.cache",
+    "build": "electron-builder --win",
+    "build:win": "electron-builder --win",
+    "build:portable": "electron-builder --win portable"
+  },
+  "keywords": [
+    "electron",
+    "chat",
+    "ai",
+    "n8n"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  },
+  "build": {
+    "appId": "com.chat.floatingapp",
+    "productName": "Deep AI Chat",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "*.js",
+      "*.html",
+      "*.css",
+      "assets/**/*",
+      "node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "node_modules",
+        "to": "app/node_modules",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "asarUnpack": [
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "artifactName": "${productName}-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    },
+    "portable": {
+      "artifactName": "${productName}-Portable-${version}.${ext}"
+    }
+  },
+  "dependencies": {
+    "@civic/auth": "^0.8.0",
+    "@elevenlabs/elevenlabs-js": "^2.2.0",
+    "@google-cloud/speech": "^7.0.1",
+    "@google/generative-ai": "^0.2.1",
+    "axios": "^1.9.0",
+    "electron-store": "^10.0.1",
+    "elevenlabs": "^1.59.0",
+    "form-data": "^4.0.3",
+    "googleapis": "^148.0.0",
+    "node-fetch": "^2.7.0",
+    "sqlite3": "^5.1.7"
+  }
+}
