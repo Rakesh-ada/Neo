@@ -6,7 +6,7 @@
 
 A floating, always-on-top desktop chat app powered by Google Gemini AI and n8n automation. Stay productive with a modern AI assistant that understands text and voice, handles automation, and looks good while doing it.
 
-[![Neo AI Chat Demo](https://img.youtube.com/vi/dQw4w9WgXcQ/maxresdefault.jpg)](https://www.youtube.com/watch?v=dQw4w9WgXcQ)
+[![Neo AI Chat Demo](https://img.youtube.com/vi/lN9plS6gY2I/maxresdefault.jpg)](https://youtu.be/lN9plS6gY2I?feature=shared)
 *Click the image above to watch the demo video*
 
 
@@ -449,7 +449,6 @@ This is our main demo template that showcases the integration of multiple tools 
 ```
 
 #### Complete AI Assistant Workflow Diagram
-![Complete AI Assistant Workflow Diagram](https://i.imgur.com/DEF789.png)
 This comprehensive workflow connects a webhook to an AI Agent powered by Google Gemini, with multiple tool integrations:
 - Google Gemini Chat Model for natural language processing
 - Simple Memory for conversation context
@@ -471,7 +470,6 @@ Send emails via Gmail automatically. Great for notifications, alerts, or automat
 **Tags:** Email, Gmail, Automation
 
 #### Gmail Workflow Diagram
-![Gmail Workflow Diagram](https://i.imgur.com/XYZ123.png)
 This workflow connects a webhook to an AI Agent powered by Google Gemini, with Gmail integration for sending emails.
 
 1. Click Copy JSON above.
@@ -488,7 +486,6 @@ Fetch current weather data for a specified city using the OpenWeatherMap API. Ex
 **Tags:** Weather, API, Automation
 
 #### Weather Workflow Diagram
-![Weather Workflow Diagram](https://i.imgur.com/ABC456.png)
 This workflow connects a webhook to an AI Agent with OpenWeatherMap, Wikipedia, and YouTube tools for comprehensive responses.
 
 1. Click Copy JSON above.
@@ -525,22 +522,18 @@ Need help? Watch the video guide provided. If you face any issues, refer to the 
 ### Video Tutorials
 
 #### n8n Workflow Tutorial
-[![Get Started With Google OAuth](https://img.youtube.com/vi/jNQXAC9IVRw/0.jpg)](https://www.youtube.com/watch?v=jNQXAC9IVRw)
 **Get Started With Google OAuth**  
 Learn how to set up and configure Google OAuth credentials for your n8n workflows.
 
 #### n8n Webhook URL Tutorial
-[![What is n8n webhook URL](https://img.youtube.com/vi/6lutNECOZFw/0.jpg)](https://www.youtube.com/watch?v=6lutNECOZFw)
 **What is n8n webhook URL and how to connect**  
 Learn how to find and use webhook URLs in n8n to connect your workflows with external applications.
 
 #### N8N Webhooks Tutorial
-[![Step-by-Step: N8N Webhooks](https://img.youtube.com/vi/mPGi1IHQxFM/0.jpg)](https://www.youtube.com/watch?v=mPGi1IHQxFM)
 **Step-by-Step: N8N Webhooks (From Beginner to Pro)**  
 Comprehensive guide to understanding and implementing webhooks in n8n, covering everything from basic setup to advanced usage.
 
 #### Advanced n8n AI Integration
-[![Get Your API Key for OpenWeather](https://img.youtube.com/vi/9bZkp7q19f0/0.jpg)](https://www.youtube.com/watch?v=9bZkp7q19f0)
 **Get Your API Key for OpenWeather**  
 Step-by-step guide on how to obtain and configure an API key for the OpenWeather service in n8n.
 
@@ -618,5 +611,5 @@ Built with ❤️ using [n8n](https://n8n.io/) and Google AI.
 
 We thank the n8n team and community for their outstanding work in workflow automation!
 
-[![Neo AI Chat Features](https://img.youtube.com/vi/kJQP7kiw5Fk/maxresdefault.jpg)](https://www.youtube.com/watch?v=kJQP7kiw5Fk)
+[![Neo AI Chat Features](https://img.youtube.com/vi/lN9plS6gY2I/maxresdefault.jpg)](https://youtu.be/lN9plS6gY2I?feature=shared)
 *Click the image above to watch the features video*
