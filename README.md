@@ -6,7 +6,7 @@
 
 A floating, always-on-top desktop chat app powered by Google Gemini AI and n8n automation. Stay productive with a modern AI assistant that understands text and voice, handles automation, and looks good while doing it.
 
-[![Neo AI Chat Demo]
+[![Neo AI Chat Demo](https://img.youtube.com/vi/dQw4w9WgXcQ/maxresdefault.jpg)](https://www.youtube.com/watch?v=dQw4w9WgXcQ)
 *Click the image above to watch the demo video*
 
 
@@ -107,6 +107,444 @@ To use all features of Neo AI Chat, you'll need to obtain the following API keys
 
 ---
 
+## 🔌 Workflow Templates
+
+### Complete AI Assistant: Demo Template
+This is our main demo template that showcases the integration of multiple tools with an AI agent. It includes Google Gemini, OpenWeatherMap, Twitter/X, GitHub, Wikipedia, and Gmail integration.
+
+**Tags:** AI Assistant, Multi-tool, Demo
+
+```json
+{
+  "name": "chat",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "= {{ $json.body.message }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [
+        580,
+        -140
+      ],
+      "id": "503d020e-9e6a-472e-9d38-a4cbd4a684cd",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        400,
+        300
+      ],
+      "id": "3797ca99-e3e3-4503-b035-a39ba84e945e",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "0CAYgjYDI7R8xwcE",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "123456"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        560,
+        300
+      ],
+      "id": "f5f01fec-f394-4043-9256-119f766481f3",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1400,
+        -340
+      ],
+      "id": "8705af19-5756-4886-952c-ba028be78215",
+      "name": "Respond to Webhook",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "rakesh",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        400,
+        -140
+      ],
+      "id": "efb6c70d-7702-44c7-8dd7-b539b1c46ace",
+      "name": "Webhook",
+      "webhookId": "ec6698cf-6781-4147-ba0d-bcf3df2fa0f5"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Example for JavaScript-based code node\nreturn {\n  message: $input.first().json.output || \"No response from AI\"\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        -260
+      ],
+      "id": "2d65e293-4962-44ce-a8f6-6759d2e4b1ed",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "cityName": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('City', ``, 'string') }}",
+        "language": "en"
+      },
+      "type": "n8n-nodes-base.openWeatherMapTool",
+      "typeVersion": 1,
+      "position": [
+        960,
+        420
+      ],
+      "id": "78022d93-14d1-43f1-8bee-4d5bad839857",
+      "name": "OpenWeatherMap",
+      "credentials": {
+        "openWeatherMapApi": {
+          "id": "CMGUGjGVEwEETFiT",
+          "name": "OpenWeatherMap account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "text": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Text', ``, 'string') }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.twitterTool",
+      "typeVersion": 2,
+      "position": [
+        1240,
+        400
+      ],
+      "id": "a36623c2-e2b2-4ccd-aba9-6145c666db8f",
+      "name": "X",
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": "UHYI7WwMAW7kSHc2",
+          "name": "X account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "repository",
+        "operation": "get",
+        "owner": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Repository_Owner', ``, 'string') }}"
+        },
+        "repository": {
+          "__rl": true,
+          "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Repository_Name', ``, 'string') }}",
+          "mode": "url",
+          "__regex": "https:\\/\\/github.com\\/(?:[-_0-9a-zA-Z]+)\\/([-_.0-9a-zA-Z]+)"
+        }
+      },
+      "type": "n8n-nodes-base.githubTool",
+      "typeVersion": 1.1,
+      "position": [
+        1480,
+        340
+      ],
+      "id": "1bfa294a-029a-4b4c-8d5e-4fae27dc80e8",
+      "name": "GitHub",
+      "webhookId": "8eb9a97a-bcda-448b-ab86-e360e7f493c6",
+      "credentials": {
+        "githubApi": {
+          "id": "RFWlN43uETbNO6K9",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.toolWikipedia",
+      "typeVersion": 1,
+      "position": [
+        1680,
+        240
+      ],
+      "id": "ff9c0ba1-610f-42b2-b978-e44650e4a14a",
+      "name": "Wikipedia"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('To', ``, 'string') }}",
+        "subject": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Subject', ``, 'string') }}",
+        "emailType": "text",
+        "message": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        1720,
+        0
+      ],
+      "id": "92feeaee-39db-491b-b1be-14471e9d17c5",
+      "name": "Gmail",
+      "webhookId": "7e9d910f-8d4e-41ea-b36c-46760388b0b9",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "caqCEnsCiejZYas0",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenWeatherMap": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "X": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GitHub": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wikipedia": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Kolkata",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "565d4222-d5bc-4b7a-b8db-0f52e2a577ec",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "c120cfab186612b4e1cc5fa3db0b0db5cf70e67d23ee72e9a63de20c8a268d5a"
+  },
+  "id": "uv5ENuAEWpgPrIAy",
+  "tags": []
+}
+```
+
+#### Complete AI Assistant Workflow Diagram
+![Complete AI Assistant Workflow Diagram](https://i.imgur.com/DEF789.png)
+This comprehensive workflow connects a webhook to an AI Agent powered by Google Gemini, with multiple tool integrations:
+- Google Gemini Chat Model for natural language processing
+- Simple Memory for conversation context
+- OpenWeatherMap for weather data
+- Twitter/X for social media posting
+- GitHub for repository information
+- Wikipedia for knowledge lookup
+- Gmail for sending emails
+
+1. Click the Copy JSON button above.
+2. Open your n8n instance and go to the workflow canvas.
+3. In your n8n workflow canvas, press Ctrl+V (or Cmd+V on Mac) to paste the JSON directly.
+4. Set up your API credentials for each service.
+5. Save and activate your workflow.
+
+### Gmail: Send Email Workflow
+Send emails via Gmail automatically. Great for notifications, alerts, or automated messages.
+
+**Tags:** Email, Gmail, Automation
+
+#### Gmail Workflow Diagram
+![Gmail Workflow Diagram](https://i.imgur.com/XYZ123.png)
+This workflow connects a webhook to an AI Agent powered by Google Gemini, with Gmail integration for sending emails.
+
+1. Click Copy JSON above.
+2. Open your n8n instance and go to the workflow canvas.
+3. In your n8n workflow canvas, simply press Ctrl+V (or Cmd+V on Mac) to paste the JSON directly onto the canvas.
+4. Set up your Gmail API credentials in the node (replace YOUR_GMAIL_CREDENTIAL).
+5. Save and activate your workflow.
+
+Need help? Watch the video guide provided. If you face any issues, refer to the video for troubleshooting steps.
+
+### Weather: Get Weather Data Workflow
+Fetch current weather data for a specified city using the OpenWeatherMap API. Extend to send notifications or trigger other actions.
+
+**Tags:** Weather, API, Automation
+
+#### Weather Workflow Diagram
+![Weather Workflow Diagram](https://i.imgur.com/ABC456.png)
+This workflow connects a webhook to an AI Agent with OpenWeatherMap, Wikipedia, and YouTube tools for comprehensive responses.
+
+1. Click Copy JSON above.
+2. Open your n8n instance and go to the workflow canvas.
+3. In your n8n workflow canvas, simply press Ctrl+V (or Cmd+V on Mac) to paste the JSON directly onto the canvas.
+4. Set your OpenWeatherMap API key in the HTTP Request node (replace YOUR_OPENWEATHER_API_KEY).
+5. Save and activate your workflow.
+
+Need help? Watch the video guide provided. If you face any issues, refer to the video for troubleshooting steps.
+
+### How to Import Workflows
+
+#### Method 1: Using JSON Code
+1. Copy the workflow JSON for the template you want to use by clicking the Copy JSON button.
+2. In your n8n workflow canvas, simply press Ctrl+V (or Cmd+V on Mac) to paste the JSON directly onto the canvas.
+3. Set up any required API credentials or keys as described in the workflow instructions.
+4. Save and activate your workflow.
+
+#### Method 2: Within n8n Interface
+1. Locate the template you want to use in the n8n template library.
+2. Select the nodes you want to copy by dragging a selection box around them.
+3. Use keyboard shortcut Ctrl+C (or ⌘+C on Mac) to copy the selected nodes.
+4. Create a new workflow or open an existing one where you want to paste the nodes.
+5. Use keyboard shortcut Ctrl+V (or ⌘+V on Mac) to paste the nodes.
+6. Adjust node positions and connections as needed.
+
+#### Pro Tips
+- When importing JSON, make sure to replace any placeholder API keys or credentials with your own.
+- After importing, test each node individually to ensure proper configuration.
+- You can modify the imported workflow to suit your specific needs by adding or removing nodes.
+- Save your workflow frequently while making changes to avoid losing your work.
+- Still have trouble? Watch the provided video guides for step-by-step troubleshooting and setup.
+
+### Video Tutorials
+
+#### n8n Workflow Tutorial
+[![Get Started With Google OAuth](https://img.youtube.com/vi/jNQXAC9IVRw/0.jpg)](https://www.youtube.com/watch?v=jNQXAC9IVRw)
+**Get Started With Google OAuth**  
+Learn how to set up and configure Google OAuth credentials for your n8n workflows.
+
+#### n8n Webhook URL Tutorial
+[![What is n8n webhook URL](https://img.youtube.com/vi/6lutNECOZFw/0.jpg)](https://www.youtube.com/watch?v=6lutNECOZFw)
+**What is n8n webhook URL and how to connect**  
+Learn how to find and use webhook URLs in n8n to connect your workflows with external applications.
+
+#### N8N Webhooks Tutorial
+[![Step-by-Step: N8N Webhooks](https://img.youtube.com/vi/mPGi1IHQxFM/0.jpg)](https://www.youtube.com/watch?v=mPGi1IHQxFM)
+**Step-by-Step: N8N Webhooks (From Beginner to Pro)**  
+Comprehensive guide to understanding and implementing webhooks in n8n, covering everything from basic setup to advanced usage.
+
+#### Advanced n8n AI Integration
+[![Get Your API Key for OpenWeather](https://img.youtube.com/vi/9bZkp7q19f0/0.jpg)](https://www.youtube.com/watch?v=9bZkp7q19f0)
+**Get Your API Key for OpenWeather**  
+Step-by-step guide on how to obtain and configure an API key for the OpenWeather service in n8n.
+
+---
 
 1. Open your terminal in this project directory.
 2. Run the following commands:
@@ -180,5 +618,5 @@ Built with ❤️ using [n8n](https://n8n.io/) and Google AI.
 
 We thank the n8n team and community for their outstanding work in workflow automation!
 
-[![Neo AI Chat Features]
+[![Neo AI Chat Features](https://img.youtube.com/vi/kJQP7kiw5Fk/maxresdefault.jpg)](https://www.youtube.com/watch?v=kJQP7kiw5Fk)
 *Click the image above to watch the features video*
